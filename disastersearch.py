@@ -1,8 +1,6 @@
 import streamlit as st
-import os
 import json
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
 
 # --- Constants ---
 
@@ -211,12 +209,17 @@ def main():
         layout="wide"
     )
 
-    # --- Load Environment Variables ---
-    load_dotenv()
+    # --- Load secrets from Streamlit ---
+    try:
+        SERP_API_KEY = st.secrets["SERP_API_KEY"]
+        GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+    except Exception:
+        st.error("Missing SERP_API_KEY or GEMINI_API_KEY in Streamlit secrets.")
+        st.stop()
+
+    APP_PASSWORD = st.secrets["APP_PASSWORD"] if "APP_PASSWORD" in st.secrets else None
 
     # --- Password Protection ---
-    APP_PASSWORD = os.getenv("APP_PASSWORD")
-
     if APP_PASSWORD:
         if "authenticated" not in st.session_state:
             st.session_state.authenticated = False
@@ -228,7 +231,6 @@ def main():
             if pw == APP_PASSWORD:
                 st.session_state.authenticated = True
                 st.success("Access granted!")
-                # Optionally force a rerun so the main UI shows cleanly
                 st.rerun()
             elif pw:
                 st.error("Incorrect password.")
@@ -236,26 +238,13 @@ def main():
             else:
                 st.stop()
     else:
-        st.warning("No APP_PASSWORD found in .env — app is not password protected.")
-
-    # --- API Keys ---
-    SERP_API_KEY = os.getenv("SERP_API_KEY")
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+        st.warning("No APP_PASSWORD set in Streamlit secrets — app is not password protected.")
 
     # --- Sidebar ---
     st.sidebar.title("Search Configuration")
+    st.sidebar.success("API keys loaded successfully from Streamlit secrets")
 
-    if not SERP_API_KEY or not GEMINI_API_KEY:
-        st.sidebar.error("API keys not found!")
-        st.sidebar.info(
-            "Please create a `.env` file in the same directory as this script with "
-            "`SERP_API_KEY`, `GEMINI_API_KEY`, and optional `APP_PASSWORD`."
-        )
-        return
-
-    st.sidebar.success("API keys loaded successfully from .env")
-
-    # --- Metro area selection (sorted, Nationwide first) ---
+    # Metro area selection (sorted, Nationwide first)
     metros_sorted = ["Nationwide"] + sorted(
         [m for m in TOP_50_US_METROS if m != "Nationwide"]
     )
@@ -291,8 +280,8 @@ def main():
         return
 
     # --- Main Page ---
-    st.title("ATI News Search Incident Reporter")
-    st.markdown("Get AI-powered summaries of recent incidents from Google News. Select the number of articles to search and the MSA if applicable.")
+    st.title("🔥 Local & National Incident Reporter")
+    st.markdown("Get AI-powered summaries of recent incidents from Google News.")
 
     if st.button("Search for Incidents", type="primary"):
 
