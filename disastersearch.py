@@ -198,15 +198,13 @@ def convert_df_to_csv(df):
     """
     Converts a DataFrame to a CSV string.
     """
-    import pandas as pd  # Lazy-load pandas
     return df.to_csv(index=False).encode('utf-8')
 
 
 # --- Main Streamlit App ---
 
 def main():
-
-    # --- Page Configuration ---
+    # Page config must be first Streamlit call
     st.set_page_config(
         page_title="Incident Summarizer",
         page_icon="🔥",
@@ -215,6 +213,32 @@ def main():
 
     # --- Load Environment Variables ---
     load_dotenv()
+
+    # --- Password Protection ---
+    APP_PASSWORD = os.getenv("APP_PASSWORD")
+
+    if APP_PASSWORD:
+        if "authenticated" not in st.session_state:
+            st.session_state.authenticated = False
+
+        if not st.session_state.authenticated:
+            st.title("🔐 Protected Incident Reporter")
+            pw = st.text_input("Enter password", type="password")
+
+            if pw == APP_PASSWORD:
+                st.session_state.authenticated = True
+                st.success("Access granted!")
+                # Optionally force a rerun so the main UI shows cleanly
+                st.rerun()
+            elif pw:
+                st.error("Incorrect password.")
+                st.stop()
+            else:
+                st.stop()
+    else:
+        st.warning("No APP_PASSWORD found in .env — app is not password protected.")
+
+    # --- API Keys ---
     SERP_API_KEY = os.getenv("SERP_API_KEY")
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
@@ -223,18 +247,23 @@ def main():
 
     if not SERP_API_KEY or not GEMINI_API_KEY:
         st.sidebar.error("API keys not found!")
-        st.sidebar.info("Please create a `.env` file in the same directory as this script with your `SERP_API_KEY` and `GEMINI_API_KEY`.")
+        st.sidebar.info(
+            "Please create a `.env` file in the same directory as this script with "
+            "`SERP_API_KEY`, `GEMINI_API_KEY`, and optional `APP_PASSWORD`."
+        )
         return
 
     st.sidebar.success("API keys loaded successfully from .env")
 
-    # Metro area selection
-    
-    metros_sorted = sorted(TOP_50_US_METROS)
+    # --- Metro area selection (sorted, Nationwide first) ---
+    metros_sorted = ["Nationwide"] + sorted(
+        [m for m in TOP_50_US_METROS if m != "Nationwide"]
+    )
+
     metro_area = st.sidebar.selectbox(
         "Select Metro Area (or Nationwide)",
         options=metros_sorted,
-        index=0  # Default to "Nationwide"
+        index=0  # Nationwide at top
     )
 
     # Number of articles
@@ -262,8 +291,8 @@ def main():
         return
 
     # --- Main Page ---
-    st.title("ATI Local & National Incident Reporter")
-    st.markdown("Get AI-powered summaries of recent incidents from Google News. Select the number of articles to summarize and the MSA if required on the left.")
+    st.title("ATI News Search Incident Reporter")
+    st.markdown("Get AI-powered summaries of recent incidents from Google News. Select the number of articles to search and the MSA if applicable.")
 
     if st.button("Search for Incidents", type="primary"):
 
@@ -277,7 +306,7 @@ def main():
 
         keyword_query = " OR ".join(f'"{k}"' for k in incident_keywords)
 
-        # FIX #1: bake the metro into the query text
+        # Bake metro into the query text
         if metro_area == "Nationwide":
             # Nationwide: just the incident keywords
             search_query = f"({keyword_query})"
@@ -286,7 +315,7 @@ def main():
             # Extract the city part ("Los Angeles" from "Los Angeles, CA")
             city = metro_area.split(",")[0].strip()
 
-            # Require the city name to appear in the article
+            # Require the city name to appear in the article text
             search_query = f"({keyword_query}) \"{city}\""
 
             # Optional: keep location bias as well
@@ -309,7 +338,10 @@ def main():
             # Respect the slider
             articles_to_summarize = all_articles[:num_articles]
 
-            st.success(f"Found {len(all_articles)} articles. Summarizing the top {len(articles_to_summarize)} with Gemini...")
+            st.success(
+                f"Found {len(all_articles)} articles. "
+                f"Summarizing the top {len(articles_to_summarize)} with Gemini..."
+            )
 
             with st.spinner("AI is reading and summarizing..."):
                 summaries = summarize_with_gemini(GEMINI_API_KEY, articles_to_summarize)
