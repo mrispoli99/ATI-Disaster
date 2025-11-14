@@ -280,8 +280,8 @@ def main():
         return
 
     # --- Main Page ---
-    st.title("🔥 Local & National Incident Reporter")
-    st.markdown("Get AI-powered summaries of recent incidents from Google News.")
+    st.title("ATI News Incident Reporter")
+    st.markdown("Get AI-powered summaries of recent incidents from Google News. Select the number of articles to pull and the MSAs if applicable.")
 
     if st.button("Search for Incidents", type="primary"):
 
@@ -378,3 +378,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
