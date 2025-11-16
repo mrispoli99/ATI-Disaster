@@ -2,7 +2,7 @@ import streamlit as st
 import os
 import json
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
+
 
 # --- Constants ---
 
@@ -389,3 +389,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
