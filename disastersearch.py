@@ -236,7 +236,7 @@ def main():
         return
 
     # ---- MAIN UI ----
-    st.title("🔥 Local & National Incident Reporter")
+    st.title("ATI Incident Reporter")
     st.write("Summaries powered by Google News + Gemini 2.5 Flash.")
 
     if st.button("Search for Incidents", type="primary"):
@@ -304,3 +304,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
